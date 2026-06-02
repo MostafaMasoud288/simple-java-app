@@ -7,18 +7,10 @@ pipeline {
 
     stages {
 
-        stage('Build App') {
-            steps {
-                script {
-                    sh 'mvn clean package -DskipTests'
-                }
-            }
-        }
-
         stage('Test') {
             steps {
                 script {
-                    sh 'mvn test'
+                    sh 'docker run --rm -v $(pwd):/app -w /app maven:3.6.3-jdk-11-slim mvn test'
                 }
             }
         }
@@ -34,7 +26,7 @@ pipeline {
         stage('Push Image') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'Password', usernameVariable: 'Username')]) {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'Password', usernameVariable: 'Username')]) {
                         sh 'docker login --username $Username --password $Password'
                         sh 'docker tag $IMAGE_NAME $Username/$IMAGE_NAME'
                         sh 'docker push $Username/$IMAGE_NAME'
