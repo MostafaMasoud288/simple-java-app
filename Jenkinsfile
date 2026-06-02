@@ -1,37 +1,47 @@
-pipeline{
-    agent{
-        label 'aws-agent'
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'java-app'
     }
-    stages{
-        stage('build'){
-            steps{
-                script{
-                    sh 'docker build -t java-app .'
+
+    stages {
+
+        stage('Build App') {
+            steps {
+                script {
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
 
-        stage('push'){
-            steps{
-                script{
-                    withCredentials([usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'Password', usernameVariable: 'Username')]) {
-                    sh 'docker login --username $Username --password $Password'
-                    sh 'docker tag java-app $Username/java-app'
-                    sh 'docker push $Username/java-app'
+        stage('Test') {
+            steps {
+                script {
+                    sh 'mvn test'
+                }
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                script {
+                    sh 'docker build -t $IMAGE_NAME .'
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'Password', usernameVariable: 'Username')]) {
+                        sh 'docker login --username $Username --password $Password'
+                        sh 'docker tag $IMAGE_NAME $Username/$IMAGE_NAME'
+                        sh 'docker push $Username/$IMAGE_NAME'
                     }
                 }
             }
         }
 
-        stage('deploy'){
-            steps{
-                script{
-                    withAWS(credentials: 'aws-cli', region: 'us-east-2') {
-                    sh 'aws eks update-kubeconfig --region us-east-2 --name eks'
-                    sh 'kubectl apply -f ./k8s/deployment.yaml'
-                    }
-                }
-            }
-        }
     }
 }
