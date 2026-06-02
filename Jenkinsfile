@@ -10,7 +10,7 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    sh 'docker run --rm -v $(pwd):/app -w /app maven:3.6.3-jdk-11-slim mvn test'
+                    sh 'docker run --rm -v $(pwd):/app -w /app maven:3.6.3-jdk-11-slim mvn -f /app/pom.xml test'
                 }
             }
         }
