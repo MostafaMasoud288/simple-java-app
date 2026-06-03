@@ -1,35 +1,51 @@
+jenkins file:
 pipeline {
-    agent any
-
-    environment {
-        IMAGE_NAME = 'java-app'
+  
+        agent any
+    tools {
+        maven 'maven16' // لازم يكون نفس الاسم اللي كتبته في الإعدادات بالظبط
     }
-
+    
     stages {
-
-        stage('Test') {
+        // 1. Build Java App
+        stage('build app') {
             steps {
                 script {
-                    sh 'docker run --rm -v $(pwd):/app -w /app maven:3.6.3-jdk-11-slim mvn -f /app/pom.xml test'
+                    // بنعمل Build للكود ونطلع الـ .jar file من غير ما نشغل الـ tests مؤقتاً
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
 
-        stage('Build Image') {
+        // 2. Test Java App
+        stage('test') {
             steps {
                 script {
-                    sh 'docker build -t $IMAGE_NAME .'
+                    // بنشغل الـ tests الخاصة بالتطبيق
+                    sh 'mvn test'
                 }
             }
         }
 
-        stage('Push Image') {
+        // 3. Build Docker Image
+        stage('build image') {
+            steps {
+                script {
+                    sh 'docker build -t java-app .'
+                }
+            }
+        }
+
+        // 4. Push to DockerHub
+        stage('push dockerhub') {
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'Password', usernameVariable: 'Username')]) {
                         sh 'docker login --username $Username --password $Password'
-                        sh 'docker tag $IMAGE_NAME $Username/$IMAGE_NAME'
-                        sh 'docker push $Username/$IMAGE_NAME'
+                        
+                        // يفضل نستخدم اسم الـ Repo الأصلي بتاعك في التاج
+                        sh 'docker tag java-app $Username/simple-java-app:latest'
+                        sh 'docker push $Username/simple-java-app:latest'
                     }
                 }
             }
